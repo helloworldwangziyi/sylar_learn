@@ -12,6 +12,9 @@
 #include <map>
 #include"singleton.h"
 #include"util.h"
+#include <time.h>
+#include <chrono>
+#include <iomanip>
 
 #define SYLAR_LOG_LEVEL(logger, level) \
     if(logger->getLevel() <= level) \
@@ -38,6 +41,7 @@
 #define SYLAR_LOG_FMT_FATAL(logger, fmt, ...) SYLAR_LOG_FMT_LEVEL(logger, sylar::LogLevel::FATAL, fmt, __VA_ARGS__)
 
 #define SYLAR_LOG_ROOT() sylar::LoggerMgr::GetInstance()->getRoot()
+#define SYLAR_LOG_NAME(name) sylar::LoggerMgr::GetInstance()->getLogger(name)
 
 namespace sylar 
 {
@@ -171,7 +175,7 @@ public:
      * @param[in] event 日志事件
      */
     virtual void log(std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::ptr event) = 0;
-    //virtual std::string toYamlString() = 0;
+    virtual std::string toYamlString() = 0;
 
     void setFormatter(LogFormatter::ptr val) { m_formatter = val;}
     LogFormatter::ptr getFormatter() const { return m_formatter;}
@@ -226,22 +230,30 @@ class StdoutLogAppender : public LogAppender {
 public:
     typedef std::shared_ptr<StdoutLogAppender> ptr;
     void log(Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override;
-    //std::string toYamlString() override;
+    std::string toYamlString() override;
 };
 
 //定义输出到文件的Appender
 class FileLogAppender : public LogAppender {
 public:
     typedef std::shared_ptr<FileLogAppender> ptr;
-    FileLogAppender(const std::string& filename);
+
+    // 文件输出器名，最大文件大小设置为1MB
+    /*
+    * @brief 构造函数
+    * @param[in] filename 文件名
+    * @param[in] maxFileSize 文件最大大小
+    */
+    FileLogAppender(const std::string& filename, uint64_t maxFileSize = 1*1024*1024);
     void log(Logger::ptr logger, LogLevel::Level level, LogEvent::ptr event) override;
-    //std::string toYamlString() override;
+    std::string toYamlString() override;
 
     //重新打开文件，文件打开成功返回true
     bool reopen();
 private:
     std::string m_filename;
     std::ofstream m_filestream;
+    uint64_t m_maxFileSize = 0;     //文件最大大小
 };
 
 
