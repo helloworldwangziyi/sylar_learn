@@ -282,3 +282,40 @@ LogEventWrap::~LogEventWrap() {
 看似我们设置了日志格式，然后输出日志，但是实际上无法正常输出我们设定的格式，为啥？参考一下上面的正确答案就可以知道，我们得到的这个logger是没有输出器的，没有输出器的logger会使用根日志器的输出格式，这就使得我们定义的输出格式失效，所以我们需要将输出器添加到logger中，这样才能正常输出日志。
 
 日志模块的主要功能就结束了，当然你还会看到一些零星的toyamlstring方法，请暂时忽视，这是下一模块的内容。
+
+
+## 添加日志分文件功能（以弃用）
+这个需求也很自然，就是日志大了，就该那就该分分了，不然一个文件太大了也不好处理
+思路一般有两种，一种是按照文件的时间来分，比如一天一分，另外也可以按照文件大小来分，比如1M一分，也可以都有不过比较复杂，这里就实现第二种方式，这里重写一下reopen() 当文件大小大于1M时，我们就重新打开一个文件。
+```c++
+bool FileLogAppender::reopen() {
+    // 如果之前有打开的文件，先关闭
+    if(m_filestream) {
+        m_filestream.close();
+    }
+
+    // 获取当前日期作为文件名后缀
+    auto now = std::chrono::system_clock::now();
+    std::time_t time = std::chrono::system_clock::to_time_t(now);
+    std::tm* tm = std::localtime(&time);
+    std::stringstream ss;
+    ss << std::put_time(tm, "_%Y%m%d_%H%M%S");
+
+    // 构造新的文件名
+    std::string bak_filename = m_filename;
+    std::string newFilename = m_filename.substr(0, m_filename.length()-20) + ss.str() + ".txt";
+
+    // 判断之前的文件是否存在
+    std::string oldFilename = m_filename;
+    if (std::ifstream(oldFilename)) {
+        // 将之前的文件重命名
+        std::string renamedFilename = "/home/wangziyi/workspace/zylar/log_folder/" + newFilename.substr(0, m_filename.length()-20) + ss.str() + "_old.txt";
+        auto res = std::rename(oldFilename.c_str(), renamedFilename.c_str());
+        if(res !=0) std::cout << "failed" << std::endl;
+    }
+    m_filename = newFilename;
+    // 打开新文件
+    m_filestream.open(newFilename, std::ios::out | std::ios::app);
+    return !!m_filestream;
+}
+```
