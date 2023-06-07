@@ -27,13 +27,7 @@ void test_fiber() {
 int main(int argc, char** argv) {
     sylar::Thread::SetName("main");
 
-    std::vector<sylar::Thread::ptr> thrs;
-    for(int i = 0; i < 3; ++i) {
-        thrs.push_back(sylar::Thread::ptr(
-                    new sylar::Thread(&test_fiber, "name_" + std::to_string(i))));
-    }
-    for(auto i : thrs) {
-        i->join();
-    }
+    test_fiber();
+
     return 0;
 }
